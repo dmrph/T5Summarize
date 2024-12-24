@@ -6,13 +6,14 @@ Script to fine-tune the T5 summarization model on the CNN/DailyMail dataset.
 
 import os
 import yaml
-import torch
 import logging
+import torch
 from transformers import (
     DataCollatorForSeq2Seq,
     TrainingArguments,
-    Trainer
+    Trainer,
 )
+import evaluate  # Use the 'evaluate' library
 from dataset_utils import load_cnn_dailymail_dataset, get_tokenizer, preprocess_function
 from model_utils import get_model, save_model
 
@@ -29,7 +30,7 @@ SAVE_DIR = config.get("save_dir", "models/t5-cnn-dailymail")
 
 def compute_metrics(eval_pred):
     """
-    Compute ROUGE metrics during evaluation.
+    Compute ROUGE metrics during evaluation
     """
     predictions, labels = eval_pred
     tokenizer = get_tokenizer()
@@ -38,11 +39,8 @@ def compute_metrics(eval_pred):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     # Load ROUGE metric
-    from datasets import load_metric
-    metric = load_metric("rouge")
-    result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-
-    # Format results
+    rouge = evaluate.load("rouge")
+    result = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
     return {key: round(value.mid.fmeasure * 100, 4) for key, value in result.items()}
 
 
@@ -50,24 +48,19 @@ def main():
     dataset = load_cnn_dailymail_dataset()
     tokenizer = get_tokenizer()
 
-    # Preprocess with optimized tokenization
+    # Preprocess datasets
     logger.info("Starting tokenization...")
     tokenized_datasets = dataset.map(
         lambda x: preprocess_function(x, tokenizer),
         batched=True,
-        batch_size=128,  # Adjusted for RAM
-        num_proc=12,     # Fully utilize CPU threads
-        remove_columns=["article", "highlights", "id"]
+        num_proc=12, 
+        remove_columns=["article", "highlights", "id"],
     )
-
-    # Save tokenized datasets for reuse
-    tokenized_datasets.save_to_disk("data/processed/cnn_dailymail")
     logger.info("Tokenization completed and saved.")
 
-    train_dataset = tokenized_datasets["train"]
-    val_dataset = tokenized_datasets["validation"]
+    train_dataset = tokenized_datasets["train"].select(range(10000))  # Use a subset for training
+    val_dataset = tokenized_datasets["validation"].select(range(2000))
 
-    # Load model
     model = get_model()
     if torch.cuda.is_available():
         model = model.to("cuda")
@@ -78,14 +71,20 @@ def main():
     # TrainingArguments
     training_args = TrainingArguments(
         output_dir=SAVE_DIR,
-        evaluation_strategy="epoch",
+        evaluation_strategy="epoch",  
+        save_strategy="epoch",  
+        save_total_limit=2,  
         learning_rate=float(config["learning_rate"]),
         per_device_train_batch_size=config["train_batch_size"],
         per_device_eval_batch_size=config["eval_batch_size"],
         num_train_epochs=config["num_train_epochs"],
         weight_decay=0.01,
         logging_steps=500,
-        save_total_limit=2
+        fp16=True,  
+        load_best_model_at_end=True,  
+        metric_for_best_model="rougeL", 
+        greater_is_better=True,  
+        resume_from_checkpoint=True,
     )
 
     # Trainer
@@ -96,13 +95,13 @@ def main():
         eval_dataset=val_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics
+        compute_metrics=compute_metrics,
     )
 
-    # Train
+    # Train the model
     trainer.train()
 
-    # Save model
+    # Save the best model
     save_model(trainer, SAVE_DIR)
     logger.info("Model training completed and saved.")
 
