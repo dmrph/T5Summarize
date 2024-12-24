@@ -21,3 +21,4 @@ data/raw/*
 .env
 venv
 .DS_STORE
+.DS_Store
