@@ -1,8 +1,8 @@
-transformers==4.31.0
-datasets==2.12.0
-rouge_score==0.1.2
-streamlit==1.24.0
+torch==2.0.1+cu118  # Replace 'cu118' with your installed CUDA version (e.g., cu117, cu102)
+torchvision==0.15.2+cu118
+torchaudio==2.0.2+cu118
+transformers==4.33.0
+datasets==2.15.0
+evaluate==0.4.0
+streamlit==1.26.0
 pyyaml==6.0
-torch==2.0.1
-evaluate
-accelerate==0.20.1
