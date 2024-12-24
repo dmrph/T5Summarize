@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+
+# Data
+data/processed/*
+!data/processed/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+
+# Model checkpoints
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Environment / credentials
+.env
