@@ -23,6 +23,7 @@ def load_cnn_dailymail_dataset():
     """
     dataset_name = config["data"]["dataset_name"]
     dataset_config = config["data"]["dataset_config"]
+    logger.info(f"Loading dataset: {dataset_name} with config: {dataset_config}")
     dataset = load_dataset(dataset_name, dataset_config)
     return dataset
 
@@ -31,22 +32,33 @@ def get_tokenizer():
     Loads the tokenizer for the specified model checkpoint in the config.
     """
     model_checkpoint = config["model_checkpoint"]
+    logger.info(f"Loading tokenizer for model checkpoint: {model_checkpoint}")
     tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, use_fast=True)
     return tokenizer
 
 def preprocess_function(examples, tokenizer, prefix="summarize: "):
     """
-    Tokenize the article (input) and highlights (summary).
+    Optimized tokenization using __call__ for T5TokenizerFast.
     """
     max_input_length = config["max_input_length"]
     max_target_length = config["max_target_length"]
 
+    # Add prefix to articles and tokenize
     inputs = [prefix + doc for doc in examples["article"]]
-    model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
+    model_inputs = tokenizer(
+        inputs,
+        max_length=max_input_length,
+        padding="max_length",
+        truncation=True
+    )
 
-    # Setup the tokenizer for targets
-    with tokenizer.as_target_tokenizer():
-        labels = tokenizer(examples["highlights"], max_length=max_target_length, truncation=True)
+    # Tokenize summaries (highlights)
+    labels = tokenizer(
+        examples["highlights"],
+        max_length=max_target_length,
+        padding="max_length",
+        truncation=True
+    )
 
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs

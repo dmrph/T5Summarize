@@ -6,57 +6,71 @@ Script to fine-tune the T5 summarization model on the CNN/DailyMail dataset.
 
 import os
 import yaml
-import numpy as np
-
 import torch
+import logging
 from transformers import (
-    DataCollatorForSeq2Seq, 
-    TrainingArguments, 
+    DataCollatorForSeq2Seq,
+    TrainingArguments,
     Trainer
 )
-import evaluate
-
 from dataset_utils import load_cnn_dailymail_dataset, get_tokenizer, preprocess_function
 from model_utils import get_model, save_model
+
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "config.yaml")
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
-SAVE_DIR = config.get("save_dir", "models/t5-summarization") 
+SAVE_DIR = config.get("save_dir", "models/t5-cnn-dailymail")
 
-def compute_rouge(eval_pred):
+
+def compute_metrics(eval_pred):
     """
-    Compute ROUGE scores for evaluation using the evaluate library.
+    Compute ROUGE metrics during evaluation.
     """
-    metric = evaluate.load("rouge")
-    tokenizer = get_tokenizer()
-    
     predictions, labels = eval_pred
+    tokenizer = get_tokenizer()
+
     decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
-    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
+    # Load ROUGE metric
+    from datasets import load_metric
+    metric = load_metric("rouge")
     result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-    result = {k: v.mid.fmeasure * 100 for k, v in result.items()}
-    return {k: round(v, 4) for k, v in result.items()}
+
+    # Format results
+    return {key: round(value.mid.fmeasure * 100, 4) for key, value in result.items()}
 
 
 def main():
     dataset = load_cnn_dailymail_dataset()
     tokenizer = get_tokenizer()
 
-    # Preprocess
+    # Preprocess with optimized tokenization
+    logger.info("Starting tokenization...")
     tokenized_datasets = dataset.map(
         lambda x: preprocess_function(x, tokenizer),
         batched=True,
+        batch_size=128,  # Adjusted for RAM
+        num_proc=12,     # Fully utilize CPU threads
         remove_columns=["article", "highlights", "id"]
     )
+
+    # Save tokenized datasets for reuse
+    tokenized_datasets.save_to_disk("data/processed/cnn_dailymail")
+    logger.info("Tokenization completed and saved.")
 
     train_dataset = tokenized_datasets["train"]
     val_dataset = tokenized_datasets["validation"]
 
+    # Load model
     model = get_model()
+    if torch.cuda.is_available():
+        model = model.to("cuda")
 
     # Data collator
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
@@ -71,7 +85,7 @@ def main():
         num_train_epochs=config["num_train_epochs"],
         weight_decay=0.01,
         logging_steps=500,
-        save_total_limit=2,
+        save_total_limit=2
     )
 
     # Trainer
@@ -82,45 +96,15 @@ def main():
         eval_dataset=val_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics_with_generate(model, tokenizer), 
+        compute_metrics=compute_metrics
     )
 
     # Train
     trainer.train()
 
-    # Evaluate
-    val_results = trainer.evaluate()
-    print("[Validation] ROUGE:", val_results)
-
-    # Save
+    # Save model
     save_model(trainer, SAVE_DIR)
-
-
-def compute_metrics_with_generate(model, tokenizer):
-    """
-    Returns a function for computing metrics using model's `generate` method.
-    """
-
-    def compute_metrics(eval_pred):
-        predictions, labels = eval_pred.predictions, eval_pred.label_ids
-
-        # Use the model to generate summaries
-        generated_predictions = model.generate(
-            torch.tensor(predictions).to(model.device),
-            max_length=config["max_target_length"],
-            num_beams=4,
-        )
-
-        # Decode predictions and labels
-        decoded_preds = tokenizer.batch_decode(generated_predictions, skip_special_tokens=True)
-        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-        # Load ROUGE metric and compute scores
-        metric = evaluate.load("rouge")
-        result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-        return {key: round(value.mid.fmeasure * 100, 4) for key, value in result.items()}
-
-    return compute_metrics
+    logger.info("Model training completed and saved.")
 
 
 if __name__ == "__main__":
