@@ -1,0 +1,14 @@
+model_checkpoint: "t5-small"
+max_input_length: 512
+max_target_length: 128
+train_batch_size: 2
+eval_batch_size: 2
+num_train_epochs: 1
+learning_rate: 2e-4
+
+data:
+  dataset_name: "cnn_dailymail"
+  dataset_config: "3.0.0"
+
+save_dir: "models/t5-cnn-dailymail" 
+
