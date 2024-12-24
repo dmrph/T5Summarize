@@ -19,3 +19,4 @@ data/raw/*
 
 # Environment / credentials
 .env
+venv/
