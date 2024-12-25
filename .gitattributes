@@ -1,1 +1,2 @@
 *.safetensors filter=lfs diff=lfs merge=lfs -text
+models/t5-cnn-dailymail/checkpoint-25/model.safetensors filter=lfs diff=lfs merge=lfs -text
