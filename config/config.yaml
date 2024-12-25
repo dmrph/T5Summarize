@@ -1,7 +1,7 @@
 model_checkpoint: "t5-small"
 max_input_length: 512
 max_target_length: 128
-train_batch_size: 8 
+train_batch_size: 8
 eval_batch_size: 8
 num_train_epochs: 3
 learning_rate: 2e-4
