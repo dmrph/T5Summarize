@@ -1,9 +1,9 @@
 model_checkpoint: "t5-small"
 max_input_length: 512
 max_target_length: 128
-train_batch_size: 8
-eval_batch_size: 8
-num_train_epochs: 3
+train_batch_size: 4 
+eval_batch_size: 4  
+num_train_epochs: 1
 learning_rate: 2e-4
 
 data:
@@ -11,3 +11,7 @@ data:
   dataset_config: "3.0.0"
 
 save_dir: "models/t5-cnn-dailymail"
+
+use_subset: true  # Use subset for faster iterations
+subset_train_size: 100
+subset_val_size: 20

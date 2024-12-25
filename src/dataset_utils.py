@@ -38,27 +38,24 @@ def get_tokenizer():
 
 def preprocess_function(examples, tokenizer, prefix="summarize: "):
     """
-    Optimized tokenization using __call__ for T5TokenizerFast.
+    Tokenize the article (input) and highlights (summary).
     """
     max_input_length = config["max_input_length"]
     max_target_length = config["max_target_length"]
 
-    # Add prefix to articles and tokenize
-    inputs = [prefix + doc for doc in examples["article"]]
-    model_inputs = tokenizer(
-        inputs,
-        max_length=max_input_length,
-        padding="max_length",
-        truncation=True
-    )
-
-    # Tokenize summaries (highlights)
-    labels = tokenizer(
-        examples["highlights"],
-        max_length=max_target_length,
-        padding="max_length",
-        truncation=True
-    )
-
-    model_inputs["labels"] = labels["input_ids"]
-    return model_inputs
+    try:
+        inputs = [prefix + doc for doc in examples["article"]]
+        model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True, padding="max_length")
+        
+        # Use `text_target` argument
+        labels = tokenizer(
+            text_target=examples["highlights"],
+            max_length=max_target_length,
+            truncation=True,
+            padding="max_length"
+        )
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+    except Exception as e:
+        logger.error(f"Error during preprocessing: {e}")
+        raise

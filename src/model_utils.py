@@ -1,14 +1,7 @@
-"""
-model_utils.py
-
-Helper functions to create, load, and save models.
-"""
-
 import os
 import yaml
 from transformers import AutoModelForSeq2SeqLM
 
-# Load config
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "config.yaml")
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
@@ -26,5 +19,7 @@ def save_model(trainer, output_dir="t5-summarization"):
     Saves the trained model & tokenizer to the output directory.
     """
     trainer.save_model(output_dir)
-    if trainer.tokenizer is not None:
+    if trainer.tokenizer:
         trainer.tokenizer.save_pretrained(output_dir)
+    else:
+        print("Warning: Tokenizer was not found in the trainer object!")

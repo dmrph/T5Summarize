@@ -19,10 +19,10 @@ data/raw/*
 
 # Environment / credentials
 .env
-<<<<<<< HEAD
 venv/
 =======
 venv
 .DS_STORE
 .DS_Store
->>>>>>> bba4c0763e28bd27a3e0a7e1304b8d09fbe4d4e9
+tempCodeRunnerFile.py
+

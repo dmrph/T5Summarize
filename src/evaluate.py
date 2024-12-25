@@ -24,31 +24,38 @@ def evaluate_model(model_dir="models/t5-cnn-dailymail"):
     """
     Evaluates the trained model on the test set and computes ROUGE scores.
     """
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_dir)
-    if torch.cuda.is_available():
-        model = model.to("cuda")
-    tokenizer = get_tokenizer()
+    try:
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_dir)
+        tokenizer = get_tokenizer()
 
-    dataset = load_cnn_dailymail_dataset()
-    tokenized_test = dataset["test"].map(
-        lambda x: preprocess_function(x, tokenizer),
-        batched=True,
-        batch_size=128,
-        num_proc=12,  # Utilize CPU threads
-        remove_columns=["article", "highlights", "id"]
-    )
+        if torch.cuda.is_available():
+            model = model.to("cuda")
 
-    metric = evaluate.load("rouge")
-    logger.info("Starting evaluation...")
-    for example in tokenized_test:
-        input_ids = torch.tensor(example["input_ids"]).unsqueeze(0).to("cuda")
-        output = model.generate(input_ids=input_ids, max_length=config["max_target_length"], num_beams=4)
-        prediction = tokenizer.decode(output[0], skip_special_tokens=True)
-        reference = example["highlights"]
-        metric.add(prediction=prediction, reference=reference)
+        dataset = load_cnn_dailymail_dataset()
+        tokenized_test = dataset["test"].map(
+            lambda x: preprocess_function(x, tokenizer),
+            batched=True,
+            batch_size=32,
+            remove_columns=["article", "highlights", "id"]
+        )
 
-    results = metric.compute()
-    logger.info(f"[Test] ROUGE: {results}")
+        rouge = evaluate.load("rouge")
+        logger.info("Starting evaluation...")
+
+        results = []
+        for example in tokenized_test:
+            input_ids = torch.tensor(example["input_ids"]).unsqueeze(0).to("cuda")
+            output = model.generate(input_ids=input_ids, max_length=config["max_target_length"], num_beams=4)
+            prediction = tokenizer.decode(output[0], skip_special_tokens=True)
+            reference = example["highlights"]
+            results.append({"prediction": prediction, "reference": reference})
+
+        metrics = rouge.compute(predictions=[r["prediction"] for r in results],
+                                references=[r["reference"] for r in results])
+        logger.info(f"[Test] ROUGE Scores: {metrics}")
+    except Exception as e:
+        logger.error(f"Error during evaluation: {e}")
+        raise
 
 
 if __name__ == "__main__":
