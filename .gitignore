@@ -16,13 +16,26 @@ data/raw/*
 *.pt
 *.pth
 *.ckpt
+*.safetensors
+
+# Ignore all model subdirectories except those required
+models/*
+!models/t5-cnn-dailymail/
+!models/t5-cnn-dailymail/config.json
+!models/t5-cnn-dailymail/tokenizer_config.json
+!models/t5-cnn-dailymail/vocab.json
+!models/t5-cnn-dailymail/special_tokens_map.json
+!models/t5-cnn-dailymail/spiece.model
+!models/t5-cnn-dailymail/tokenizer.json
 
 # Environment / credentials
 .env
 venv/
-=======
-venv
-.DS_STORE
-.DS_Store
 tempCodeRunnerFile.py
 
+# Operating System files
+.DS_STORE
+.DS_Store
+
+# Visual Studio Code settings
+.vscode/
