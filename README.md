@@ -19,7 +19,6 @@ then serves an interactive demo via Streamlit.
 1. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
-   cd summarization
 
 2. **Train Model (optional, if you want to fine-tune yourself)**
     ```bash
