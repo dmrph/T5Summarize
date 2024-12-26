@@ -9,7 +9,7 @@ import yaml
 import torch
 import logging
 from transformers import AutoModelForSeq2SeqLM
-import evaluate
+import evaluate_model
 from dataset_utils import load_cnn_dailymail_dataset, get_tokenizer, preprocess_function
 
 # Logging setup
@@ -39,7 +39,7 @@ def evaluate_model(model_dir="models/t5-cnn-dailymail"):
             remove_columns=["article", "highlights", "id"]
         )
 
-        rouge = evaluate.load("rouge")
+        rouge = evaluate_model.load("rouge")
         logger.info("Starting evaluation...")
 
         results = []
