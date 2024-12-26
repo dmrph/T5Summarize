@@ -13,7 +13,10 @@ from model_utils import get_model, save_model
 import numpy as np
 
 # Logging setup
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "config.yaml")
@@ -56,11 +59,12 @@ def main():
     dataset = load_cnn_dailymail_dataset()
     tokenizer = get_tokenizer()
 
+    num_proc = config["preprocessing"].get("num_proc", 4)
     tokenized_datasets = dataset.map(
         lambda x: preprocess_function(x, tokenizer),
         batched=True,
         batch_size=512,
-        num_proc=12,
+        num_proc=num_proc,
         remove_columns=["article", "highlights", "id"]
     )
 
@@ -81,20 +85,22 @@ def main():
 
     training_args = TrainingArguments(
         output_dir=SAVE_DIR,
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        save_total_limit=2,
+        eval_strategy=config["training"]["eval_strategy"], 
+        save_strategy=config["training"]["save_strategy"],
+        save_total_limit=config["training"]["save_total_limit"],
         learning_rate=float(config["learning_rate"]),
         per_device_train_batch_size=config["train_batch_size"],
         per_device_eval_batch_size=config["eval_batch_size"],
         num_train_epochs=config["num_train_epochs"],
         weight_decay=0.01,
-        logging_steps=500,
+        logging_steps=config["training"]["logging_steps"],
         fp16=True,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
-        resume_from_checkpoint=True,
+        gradient_accumulation_steps=config["training"]["gradient_accumulation_steps"],
+        warmup_steps=config["training"].get("warmup_steps", 500),
+        resume_from_checkpoint=config["training"].get("resume_from_checkpoint", False)
     )
 
     trainer = Trainer(

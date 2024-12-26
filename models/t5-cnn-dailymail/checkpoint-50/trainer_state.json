@@ -1,0 +1,49 @@
+{
+  "best_metric": 5.393406867980957,
+  "best_model_checkpoint": "models/t5-cnn-dailymail\\checkpoint-50",
+  "epoch": 2.0,
+  "eval_steps": 500,
+  "global_step": 50,
+  "is_hyper_param_search": false,
+  "is_local_process_zero": true,
+  "is_world_process_zero": true,
+  "log_history": [
+    {
+      "epoch": 1.0,
+      "eval_loss": 7.110479831695557,
+      "eval_runtime": 0.4116,
+      "eval_samples_per_second": 48.594,
+      "eval_steps_per_second": 12.149,
+      "step": 25
+    },
+    {
+      "epoch": 2.0,
+      "eval_loss": 5.393406867980957,
+      "eval_runtime": 0.3629,
+      "eval_samples_per_second": 55.114,
+      "eval_steps_per_second": 13.779,
+      "step": 50
+    }
+  ],
+  "logging_steps": 100,
+  "max_steps": 75,
+  "num_input_tokens_seen": 0,
+  "num_train_epochs": 3,
+  "save_steps": 500,
+  "stateful_callbacks": {
+    "TrainerControl": {
+      "args": {
+        "should_epoch_stop": false,
+        "should_evaluate": false,
+        "should_log": false,
+        "should_save": true,
+        "should_training_stop": false
+      },
+      "attributes": {}
+    }
+  },
+  "total_flos": 13534180147200.0,
+  "train_batch_size": 4,
+  "trial_name": null,
+  "trial_params": null
+}
