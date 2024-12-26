@@ -8,6 +8,8 @@ streamlit>=1.24.0
 huggingface-hub>=0.15.1,<1.0.0
 transformers[torch]
 absl-py>=1.0.0
+nltk>=3.8.0
+rouge_score>=0.1.2
 
 
 #pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118

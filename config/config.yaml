@@ -7,8 +7,8 @@ data:
 save_dir: "models/t5-cnn-dailymail"
 
 use_subset: true
-subset_train_size: 100
-subset_val_size: 20
+subset_train_size: 50000
+subset_val_size: 5000
 
 preprocessing:
   max_input_length: 256
@@ -18,7 +18,7 @@ preprocessing:
 training:
   train_batch_size: 4
   eval_batch_size: 4
-  num_train_epochs: 3
+  num_train_epochs: 2
   learning_rate: 3e-4
   logging_steps: 100
   gradient_accumulation_steps: 1
