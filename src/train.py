@@ -43,10 +43,13 @@ def compute_metrics(eval_pred):
         import evaluate
         rouge = evaluate.load("rouge")
         result = rouge.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-        return {key: round(value.mid.fmeasure * 100, 4) for key, value in result.items()}
+
+        # Directly round the scores instead of accessing a `mid` attribute
+        return {key: round(value * 100, 4) for key, value in result.items()}
     except Exception as e:
         logger.error(f"Error computing metrics: {e}")
         return {}
+
 
 def main():
     dataset = load_cnn_dailymail_dataset()
@@ -61,15 +64,16 @@ def main():
     )
 
     if config.get("use_subset", False):
-        train_dataset = tokenized_datasets["train"].select(range(config["subset_train_size"]))
-        val_dataset = tokenized_datasets["validation"].select(range(config["subset_val_size"]))
+        train_dataset = tokenized_datasets["train"].select(range(config.get("data", {}).get("subset_train_size", 10000)))
+        val_dataset = tokenized_datasets["validation"].select(range(config.get("data", {}).get("subset_val_size", 1000)))
     else:
         train_dataset = tokenized_datasets["train"]
         val_dataset = tokenized_datasets["validation"]
 
     model = get_model()
-    if torch.cuda.is_available():
-        model = model.to("cuda")
+    model.gradient_checkpointing_enable()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = model.to(device)
 
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
@@ -78,6 +82,8 @@ def main():
         eval_strategy=config["training"]["eval_strategy"],
         save_strategy=config["training"]["save_strategy"],
         save_total_limit=config["training"]["save_total_limit"],
+        eval_steps=config["training"].get("eval_steps", 2000),
+        save_steps=config["training"].get("save_steps", 500),
         learning_rate=float(config["training"]["learning_rate"]),
         per_device_train_batch_size=config["training"]["train_batch_size"],
         per_device_eval_batch_size=config["training"]["eval_batch_size"],
@@ -85,10 +91,10 @@ def main():
         weight_decay=0.01,
         logging_steps=config["training"]["logging_steps"],
         fp16=True,
-        load_best_model_at_end=config["training"]["resume_from_checkpoint"],
         gradient_accumulation_steps=config["training"]["gradient_accumulation_steps"],
         warmup_steps=config["training"]["warmup_steps"],
-        save_steps=500,
+        resume_from_checkpoint=config["training"]["resume_from_checkpoint"],
+        load_best_model_at_end=True,
     )
 
     trainer = Trainer(
@@ -104,6 +110,7 @@ def main():
     save_model(trainer, SAVE_DIR)
     tokenizer.save_pretrained(SAVE_DIR)
     logger.info("Training completed and model/tokenizer saved.")
+
     
 if __name__ == "__main__":
     main()
